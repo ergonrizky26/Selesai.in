@@ -8,7 +8,8 @@ import { id } from 'date-fns/locale';
 import { TaskDetailModal } from '@/components/tasks/task-detail-modal';
 import { cn } from '@/lib/utils';
 
-export function ArchiveClient({ tasks }: { tasks: any[] }) {
+// Tambahkan allProjects dan allLabels
+export function ArchiveClient({ tasks, allProjects = [], allLabels = [] }: { tasks: any[], allProjects?: any[], allLabels?: any[] }) {
     const [selectedTask, setSelectedTask] = useState<any | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -124,7 +125,7 @@ export function ArchiveClient({ tasks }: { tasks: any[] }) {
                                             </div>
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="text-[15px] font-bold text-slate-900 truncate">{task.title}</h4>
+                                            <h4 className="text-[15px] font-bold text-slate-500 line-through truncate">{task.title}</h4>
                                             <p className="text-xs text-slate-400 mt-1 mb-3">
                                                 Selesai pada {format(new Date(task.updatedAt), 'hh:mm a')}
                                             </p>
@@ -164,6 +165,8 @@ export function ArchiveClient({ tasks }: { tasks: any[] }) {
                 onClose={() => setIsModalOpen(false)}
                 task={selectedTask}
                 readOnly={true} // <-- MODE BACA-SAJA AKTIF
+                allProjects={allProjects}
+                allLabels={allLabels}
             />
 
         </div>

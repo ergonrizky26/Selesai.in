@@ -21,35 +21,49 @@ interface TaskDetailModalProps {
     onClose: () => void;
     allProjects?: any[];
     allLabels?: any[];
+    readOnly?: boolean;
 }
 
-export function TaskDetailModal({ task, isOpen, onClose, allProjects = [], allLabels = [] }: TaskDetailModalProps) {
-    const [title, setTitle] = useState(task.title);
-    const [description, setDescription] = useState(task.description || '');
+export function TaskDetailModal({ task, isOpen, onClose, allProjects = [], allLabels = [], readOnly = false }: TaskDetailModalProps) {
+    const [title, setTitle] = useState(task?.title || '');
+    const [description, setDescription] = useState(task?.description || '');
     const [comments, setComments] = useState<any[]>([]);
     const [newComment, setNewComment] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // State untuk Metadata
-    const [priority, setPriority] = useState(task.priority || 'p4');
-    const [dueDate, setDueDate] = useState<Date | null>(task.dueDate ? new Date(task.dueDate) : null);
-    const [projectId, setProjectId] = useState(task.projectId || '');
-    const [selectedLabels, setSelectedLabels] = useState<string[]>(task.labels || []);
+    const [priority, setPriority] = useState(task?.priority || 'p4');
+    const [dueDate, setDueDate] = useState<Date | null>(task?.dueDate ? new Date(task.dueDate) : null);
+    const [projectId, setProjectId] = useState(task?.projectId || '');
+    const [selectedLabels, setSelectedLabels] = useState<string[]>(task?.labels || []);
 
     // Ref untuk debounce auto-save
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // 2. PERBAIKAN: Sync state setiap kali tugas yang diklik berubah
+    useEffect(() => {
+        if (task) {
+            setTitle(task.title || '');
+            setDescription(task.description || '');
+            setPriority(task.priority || 'p4');
+            setDueDate(task.dueDate ? new Date(task.dueDate) : null);
+            setProjectId(task.projectId || '');
+            setSelectedLabels(task.labels || []);
+        }
+    }, [task]);
+
     // Fungsi untuk Update Metadata Instan
     const handleUpdate = async (updates: any) => {
+        if (!task) return; // Proteksi tambahan
         await updateTaskMetadata(task.id, updates);
     };
 
     // Ambil komentar saat modal dibuka
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && task?.id) {
             getTaskComments(task.id).then(setComments);
         }
-    }, [isOpen, task.id]);
+    }, [isOpen, task?.id]);
 
     // Fungsi Auto-save untuk Edit Task
     const handleAutoSave = (newTitle: string, newDesc: string) => {
@@ -75,6 +89,9 @@ export function TaskDetailModal({ task, isOpen, onClose, allProjects = [], allLa
         setIsSubmitting(false);
     };
 
+    // 3. PERBAIKAN: Proteksi render. Letakkan ini SETELAH semua hooks (useState, useEffect)
+    if (!task) return null;
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             {/* PERBAIKAN LEBAR MODAL: Menjadi max-w-[850px] agar pas untuk 2 kolom */}
@@ -88,22 +105,26 @@ export function TaskDetailModal({ task, isOpen, onClose, allProjects = [], allLa
                         <div className="p-8 space-y-4 shrink-0">
                             <Input
                                 value={title}
+                                readOnly={readOnly}
                                 onChange={(e) => {
+                                    if (readOnly) return;
                                     setTitle(e.target.value);
                                     handleAutoSave(e.target.value, description);
                                 }}
-                                className="border-none shadow-none text-3xl font-bold p-0 focus-visible:ring-0 h-auto"
+                                className={cn("border-none shadow-none text-3xl font-bold p-0 focus-visible:ring-0 h-auto", readOnly && "focus-visible:ring-transparent cursor-default")}
                             />
                             <div className="flex gap-3 text-slate-400">
                                 <AlignLeft className="w-5 h-5 shrink-0 mt-1" />
                                 <Textarea
                                     value={description}
+                                    readOnly={readOnly}
                                     onChange={(e) => {
+                                        if (readOnly) return;
                                         setDescription(e.target.value);
                                         handleAutoSave(title, e.target.value);
                                     }}
-                                    className="border-none shadow-none focus-visible:ring-0 p-0 min-h-[60px] resize-none text-slate-600"
-                                    placeholder="Tambahkan deskripsi..."
+                                    className={cn("border-none shadow-none focus-visible:ring-0 p-0 min-h-[60px] resize-none text-slate-600", readOnly && "focus-visible:ring-transparent cursor-default")}
+                                    placeholder={readOnly ? "Tidak ada deskripsi." : "Tambahkan deskripsi..."}
                                 />
                             </div>
                         </div>
@@ -143,35 +164,40 @@ export function TaskDetailModal({ task, isOpen, onClose, allProjects = [], allLa
                         </ScrollArea>
 
                         {/* Form Input Komentar */}
-                        <div className="p-4 bg-white border-t border-slate-100 shrink-0">
-                            <div className="flex items-end gap-3">
-                                <Textarea
-                                    value={newComment}
-                                    onChange={(e) => setNewComment(e.target.value)}
-                                    placeholder="Tulis komentar..."
-                                    className="min-h-[50px] max-h-[120px] rounded-2xl border-slate-200 focus-visible:ring-purple-500 resize-none text-sm"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            handleSendComment();
-                                        }
-                                    }}
-                                />
-                                <Button
-                                    disabled={!newComment.trim() || isSubmitting}
-                                    onClick={handleSendComment}
-                                    className="bg-purple-600 hover:bg-purple-700 rounded-xl h-11 w-11 p-0 shrink-0 shadow-lg shadow-purple-100"
-                                >
-                                    <Send className="w-5 h-5 -ml-0.5" />
-                                </Button>
+                        {!readOnly && (
+                            <div className="p-4 bg-white border-t border-slate-100 shrink-0">
+                                <div className="flex items-end gap-3">
+                                    <Textarea
+                                        value={newComment}
+                                        onChange={(e) => setNewComment(e.target.value)}
+                                        placeholder="Tulis komentar..."
+                                        className="min-h-[50px] max-h-[120px] rounded-2xl border-slate-200 focus-visible:ring-purple-500 resize-none text-sm"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleSendComment();
+                                            }
+                                        }}
+                                    />
+                                    <Button
+                                        disabled={!newComment.trim() || isSubmitting}
+                                        onClick={handleSendComment}
+                                        className="bg-purple-600 hover:bg-purple-700 rounded-xl h-11 w-11 p-0 shrink-0 shadow-lg shadow-purple-100"
+                                    >
+                                        <Send className="w-5 h-5 -ml-0.5" />
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                     {/* <--- AKHIR SISI KIRI (Perhatikan penutup div ini!) */}
 
 
                     {/* ================= SISI KANAN: Metadata Sidebar ================= */}
-                    <div className="w-[260px] bg-slate-50/50 p-6 space-y-8 shrink-0 overflow-y-auto">
+                    <div className={cn("w-[260px] bg-slate-50/50 p-6 space-y-8 shrink-0 overflow-y-auto", readOnly && "opacity-80 pointer-events-none")}>
+                        {/* Dengan menambahkan 'pointer-events-none' pada div pembungkus sisi kanan di atas 
+                            saat mode readOnly, semua tombol Popover, Calendar, dan Label otomatis TIDAK BISA DIKLIK!
+                        */}
 
                         {/* Proyek Section */}
                         <div className="space-y-2">

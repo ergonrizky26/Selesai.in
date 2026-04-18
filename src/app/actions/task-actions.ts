@@ -235,3 +235,46 @@ async function getOrCreateProject(userId: string, name: string) {
     const res = await db.insert(projects).values({ userId, name, color: '#8B5CF6' }).returning({ id: projects.id });
     return res[0].id;
 }
+
+// Mengambil semua tugas untuk Inbox
+export async function getAllTasks() {
+    const user = await getSessionUser();
+    if (!user) return [];
+
+    return await db.query.tasks.findMany({
+        where: eq(tasks.userId, user.id),
+        orderBy: [desc(tasks.createdAt)],
+    });
+}
+
+// Membuat tugas baru
+export async function createTask(data: { title: string; priority?: string }) {
+    const user = await getSessionUser();
+    if (!user) throw new Error('Unauthorized');
+
+    await db.insert(tasks).values({
+        userId: user.id,
+        title: data.title,
+        priority: data.priority || 'P4',
+        status: 'todo',
+    });
+
+    revalidatePath('/dashboard/inbox');
+    revalidatePath('/dashboard');
+    return { success: true };
+}
+
+// Mengambil semua tugas yang sudah SELESAI
+export async function getCompletedTasks() {
+    const user = await getSessionUser();
+    if (!user) return [];
+
+    return await db.query.tasks.findMany({
+        where: and(
+            eq(tasks.userId, user.id),
+            eq(tasks.status, 'done')
+        ),
+        // Kita asumsikan updatedAt adalah waktu saat tugas di-set menjadi 'done'
+        orderBy: [desc(tasks.updatedAt)],
+    });
+}

@@ -11,7 +11,9 @@ import {
     Tags,
     Plus,
     LogOut,
-    HelpCircle
+    HelpCircle,
+    Inbox,
+    Archive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSupabase } from '@/components/providers/supabase-provider';
@@ -20,10 +22,12 @@ import { SidebarQuickAdd } from './sidebar-quick-add';
 const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Focus Mode', href: '/dashboard/focus', icon: Focus },
+    { name: 'Inbox', href: '/dashboard/inbox', icon: Inbox },
     { name: 'Today', href: '/dashboard/today', icon: CalendarDays },
     { name: 'Upcoming', href: '/dashboard/upcoming', icon: CalendarClock },
     { name: 'Projects', href: '/dashboard/projects', icon: FolderClosed },
     { name: 'Labels', href: '/dashboard/labels', icon: Tags },
+    { name: 'Archive', href: '/dashboard/archive', icon: Archive },
 ];
 
 export function Sidebar() {

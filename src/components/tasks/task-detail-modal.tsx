@@ -164,31 +164,29 @@ export function TaskDetailModal({ task, isOpen, onClose, allProjects = [], allLa
                         </ScrollArea>
 
                         {/* Form Input Komentar */}
-                        {!readOnly && (
-                            <div className="p-4 bg-white border-t border-slate-100 shrink-0">
-                                <div className="flex items-end gap-3">
-                                    <Textarea
-                                        value={newComment}
-                                        onChange={(e) => setNewComment(e.target.value)}
-                                        placeholder="Tulis komentar..."
-                                        className="min-h-[50px] max-h-[120px] rounded-2xl border-slate-200 focus-visible:ring-purple-500 resize-none text-sm"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && !e.shiftKey) {
-                                                e.preventDefault();
-                                                handleSendComment();
-                                            }
-                                        }}
-                                    />
-                                    <Button
-                                        disabled={!newComment.trim() || isSubmitting}
-                                        onClick={handleSendComment}
-                                        className="bg-purple-600 hover:bg-purple-700 rounded-xl h-11 w-11 p-0 shrink-0 shadow-lg shadow-purple-100"
-                                    >
-                                        <Send className="w-5 h-5 -ml-0.5" />
-                                    </Button>
-                                </div>
+                        <div className="p-4 bg-white border-t border-slate-100 shrink-0">
+                            <div className="flex items-end gap-3">
+                                <Textarea
+                                    value={newComment}
+                                    onChange={(e) => setNewComment(e.target.value)}
+                                    placeholder="Tulis komentar..."
+                                    className="min-h-[50px] max-h-[120px] rounded-2xl border-slate-200 focus-visible:ring-purple-500 resize-none text-sm"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSendComment();
+                                        }
+                                    }}
+                                />
+                                <Button
+                                    disabled={!newComment.trim() || isSubmitting}
+                                    onClick={handleSendComment}
+                                    className="bg-purple-600 hover:bg-purple-700 rounded-xl h-11 w-11 p-0 shrink-0 shadow-lg shadow-purple-100"
+                                >
+                                    <Send className="w-5 h-5 -ml-0.5" />
+                                </Button>
                             </div>
-                        )}
+                        </div>
                     </div>
                     {/* <--- AKHIR SISI KIRI (Perhatikan penutup div ini!) */}
 

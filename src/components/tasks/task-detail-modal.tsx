@@ -49,8 +49,21 @@ export function TaskDetailModal({ task, isOpen, onClose, allProjects = [], allLa
             setDueDate(task.dueDate ? new Date(task.dueDate) : null);
             setProjectId(task.projectId || '');
             setSelectedLabels(task.labels || []);
+
+            // --- PERBAIKAN 1: Kosongkan memori komentar dari task sebelumnya ---
+            setComments([]);
+            setNewComment('');
         }
     }, [task]);
+
+    // 2. TAMBAHKAN USE-EFFECT BARU INI TEPAT DI BAWAHNYA
+    // Untuk memastikan memori bersih saat modal ditutup (X / klik luar)
+    useEffect(() => {
+        if (!isOpen) {
+            setComments([]);
+            setNewComment('');
+        }
+    }, [isOpen]);
 
     // Fungsi untuk Update Metadata Instan
     const handleUpdate = async (updates: any) => {

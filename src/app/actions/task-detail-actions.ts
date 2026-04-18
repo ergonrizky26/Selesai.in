@@ -60,6 +60,10 @@ export async function addComment(taskId: string, content: string) {
         content,
     });
 
+    // --- PERBAIKAN 2: Instruksi "Nuklir" untuk mereset semua cache data tugas ---
+    // Parameter 'layout' memastikan seluruh halaman tersinkronisasi sempurna
+    revalidatePath('/', 'layout');
+
     return { success: true };
 }
 

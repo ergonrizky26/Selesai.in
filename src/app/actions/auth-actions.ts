@@ -94,3 +94,13 @@ export async function resetPassword(formData: FormData) {
     if (error) return { error: error.message };
     return { success: true };
 }
+
+export async function signOutUser() {
+    const supabase = await getSupabase();
+
+    // Hapus sesi di Supabase
+    await supabase.auth.signOut();
+
+    // Arahkan kembali ke halaman login
+    redirect('/login');
+}

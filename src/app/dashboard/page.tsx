@@ -8,6 +8,10 @@ import { getTodayTasks } from '@/app/actions/task-actions';
 import { getActiveProjects } from '@/app/actions/project-actions';
 import { getUserLabels } from '@/app/actions/label-actions';
 import { Greeting } from '@/components/dashboard/greeting';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+
+
 
 export default async function DashboardPage() {
     const [stats, todayTasks, activeProjects, userLabels] = await Promise.all([
@@ -17,12 +21,22 @@ export default async function DashboardPage() {
         getUserLabels() // Ambil data label
     ]);
 
+    // 2. TAMBAHKAN BLOK KODE INISIALISASI SUPABASE INI DI DALAM FUNGSI
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { cookies: { getAll() { return cookieStore.getAll() }, setAll() { } } }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
             {/* Kolom Kiri & Tengah (Main Content) */}
             <div className="lg:col-span-2 space-y-8 pb-12">
                 <div className="space-y-1">
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight"><Greeting /></h2>
+                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight"><Greeting user={user} /></h2>
                     <p className="text-slate-500">Your digital sanctuary is ready. You have {stats.totalToday - stats.completedToday} tasks remaining today.</p>
                 </div>
 

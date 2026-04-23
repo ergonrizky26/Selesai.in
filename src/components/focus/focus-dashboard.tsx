@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Droplets, Coffee, Wind, Target, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { completeTask } from '@/app/actions/task-actions'; // Asumsi action ini sudah ada
+import { completeTask } from '@/app/actions/task-actions';
+import { saveFocusSession } from '@/app/actions/focus-actions'; // IMPORT ACTION BARU
+import { useRouter } from 'next/navigation'; // UNTUK REFRESH DATA
 
 const AMBIENT_SOUNDS = [
     { id: 'rain', name: 'Rain', icon: Droplets, url: 'https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3' },
@@ -15,10 +17,15 @@ const AMBIENT_SOUNDS = [
 const FOCUS_TIME = 25 * 60; // 25 Menit dalam detik
 
 export function FocusDashboard({ initialTasks }: { initialTasks: any[] }) {
+    const router = useRouter();
+
     // --- TIMER STATE ---
     const [timeLeft, setTimeLeft] = useState(FOCUS_TIME);
     const [isActive, setIsActive] = useState(false);
-    const [focusToday, setFocusToday] = useState(2); // Mockup: 2 hours today
+
+    // State baru untuk melacak apakah notifikasi/penyimpanan sedang diproses
+    const [isSaving, setIsSaving] = useState(false);
+    const [toastMessage, setToastMessage] = useState("Ready to focus.");
 
     // --- TASK STATE ---
     const [queue, setQueue] = useState(initialTasks);
@@ -32,17 +39,78 @@ export function FocusDashboard({ initialTasks }: { initialTasks: any[] }) {
     // LOGIKA TIMER
     useEffect(() => {
         let interval: NodeJS.Timeout;
+
         if (isActive && timeLeft > 0) {
             interval = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-        } else if (timeLeft === 0) {
+        } else if (isActive && timeLeft === 0) {
+            // TIMER SELESAI SECARA NATURAL (MENCAPAI 0)
             setIsActive(false);
-            // Mainkan suara alarm di sini jika ada
+            handleSessionComplete(25); // Simpan sesi penuh 25 menit
         }
+
         return () => clearInterval(interval);
     }, [isActive, timeLeft]);
 
     const toggleTimer = () => setIsActive(!isActive);
     const resetTimer = () => { setIsActive(false); setTimeLeft(FOCUS_TIME); };
+
+    // FUNGSI UNTUK MENYIMPAN SESI KE DATABASE
+    const handleSessionComplete = async (durationMinutes: number) => {
+        if (durationMinutes <= 0) return; // Abaikan jika belum fokus sama sekali
+
+        setIsSaving(true);
+        setToastMessage(`Saving ${durationMinutes} min session...`);
+
+        // Mainkan suara sukses singkat (opsional)
+        const successSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
+        successSound.volume = 0.4;
+        successSound.play().catch(e => console.log('Audio blocked', e));
+
+        // Panggil Server Action
+        const res = await saveFocusSession(
+            durationMinutes,
+            activeTask?.id,
+            activeTask?.projectId
+        );
+
+        if (res?.success) {
+            setToastMessage(`Great job! ${durationMinutes} minutes recorded.`);
+            resetTimer(); // Kembalikan timer ke 25:00
+            router.refresh(); // Refresh halaman agar data terbaru terambil
+        } else {
+            setToastMessage("Gagal menyimpan sesi.");
+        }
+
+        setIsSaving(false);
+
+        // Sembunyikan toast setelah 4 detik
+        setTimeout(() => setToastMessage("Ready to focus."), 4000);
+    };
+
+    // LOGIKA TUGAS SELESAI ("MARK AS DONE")
+    const handleCompleteTask = async (taskId: string) => {
+        setIsSaving(true);
+
+        // 1. Hitung berapa menit user sudah fokus (pembulatan ke bawah)
+        const secondsFocused = FOCUS_TIME - timeLeft;
+        const minutesFocused = Math.floor(secondsFocused / 60);
+
+        // 2. Jika user sudah fokus minimal 1 menit, simpan sesinya
+        if (minutesFocused >= 1) {
+            await saveFocusSession(minutesFocused, activeTask?.id, activeTask?.projectId);
+        }
+
+        // 3. Selesaikan tugasnya
+        await completeTask(taskId);
+
+        // 4. Update UI & reset timer untuk tugas berikutnya
+        setQueue(prev => prev.filter(t => t.id !== taskId));
+        resetTimer();
+        setIsSaving(false);
+
+        setToastMessage(`Task done! ${minutesFocused > 0 ? `${minutesFocused} min recorded.` : ''}`);
+        setTimeout(() => setToastMessage("Ready to focus."), 4000);
+    };
 
     // LOGIKA AUDIO AMBIENT
     useEffect(() => {
@@ -62,12 +130,6 @@ export function FocusDashboard({ initialTasks }: { initialTasks: any[] }) {
     }, [activeAudio]);
 
     const toggleAudio = (id: string) => setActiveAudio(prev => prev === id ? null : id);
-
-    // LOGIKA TUGAS SELESAI
-    const handleCompleteTask = async (taskId: string) => {
-        await completeTask(taskId); // Update ke DB
-        setQueue(prev => prev.filter(t => t.id !== taskId)); // Hapus dari UI seketika
-    };
 
     // FORMAT TIMER & LINGKARAN (SVG)
     const formatTime = (seconds: number) => {
@@ -112,30 +174,38 @@ export function FocusDashboard({ initialTasks }: { initialTasks: any[] }) {
 
                 {/* Kontrol Timer */}
                 <div className="flex items-center gap-6 mt-16">
-                    <button onClick={resetTimer} className="w-14 h-14 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                    <button onClick={resetTimer} disabled={isSaving} className="w-14 h-14 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50">
                         <RotateCcw className="w-6 h-6" />
                     </button>
 
                     <Button
                         onClick={toggleTimer}
+                        disabled={isSaving}
                         className={cn(
                             "rounded-full font-bold h-16 px-12 shadow-2xl transition-all text-lg",
-                            isActive ? "bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20" : "bg-[#6c2bd9] hover:bg-[#5b21b6] text-white shadow-purple-600/30"
+                            isActive ? "bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20" : "bg-[#6c2bd9] hover:bg-[#5b21b6] text-white shadow-purple-600/30",
+                            isSaving && "opacity-50 cursor-not-allowed"
                         )}
                     >
                         {isActive ? 'Pause Session' : 'Start Session'}
                     </Button>
 
-                    <button className="w-14 h-14 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
-                        <Pause className="w-6 h-6" /> {/* Placeholder untuk skip/stop */}
+                    {/* Tombol Stop & Save Manual */}
+                    <button
+                        onClick={() => handleSessionComplete(Math.floor((FOCUS_TIME - timeLeft) / 60))}
+                        disabled={isSaving || timeLeft === FOCUS_TIME}
+                        title="End & Save Session"
+                        className="w-14 h-14 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Pause className="w-6 h-6" />
                     </button>
                 </div>
 
-                {/* Toast Notifikasi Simulasi Bawah */}
+                {/* Toast Notifikasi (Dinamis) */}
                 <div className="absolute bottom-10 bg-white border border-slate-100 shadow-sm px-6 py-3 rounded-full flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                    <CheckCircle2 className={cn("w-5 h-5", toastMessage.includes("Ready") ? "text-slate-300" : "text-emerald-400")} />
                     <span className="text-sm font-medium text-slate-600">
-                        You've focused for <strong className="text-purple-600">{focusToday} hours</strong> today. Great flow!
+                        {toastMessage}
                     </span>
                 </div>
             </div>
@@ -161,8 +231,12 @@ export function FocusDashboard({ initialTasks }: { initialTasks: any[] }) {
                                 ))}
                             </div>
 
-                            <Button onClick={() => handleCompleteTask(activeTask.id)} className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl h-12 font-bold shadow-lg shadow-slate-900/20">
-                                Mark as Done
+                            <Button
+                                onClick={() => handleCompleteTask(activeTask.id)}
+                                disabled={isSaving}
+                                className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl h-12 font-bold shadow-lg shadow-slate-900/20 disabled:opacity-70"
+                            >
+                                {isSaving ? 'Saving...' : 'Mark as Done'}
                             </Button>
                         </div>
                     ) : (

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, varchar, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, varchar, boolean, integer } from 'drizzle-orm/pg-core';
 
 // Tabel Profiles (Disinkronkan dengan Supabase Auth secara manual)
 export const profiles = pgTable('profiles', {
@@ -53,4 +53,19 @@ export const comments = pgTable('comments', {
     userId: uuid('user_id').references(() => profiles.id).notNull(),
     content: text('content').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
+});
+
+// TABEL BARU: Menyimpan rekaman sesi Pomodoro/Fokus
+export const focusSessions = pgTable('focus_sessions', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull(),
+    taskId: uuid('task_id'), // Opsional: Tugas apa yang sedang dikerjakan
+    projectId: uuid('project_id'), // Opsional: Proyek apa
+    durationMinutes: integer('duration_minutes').notNull(), // Berapa lama sesinya (misal 25)
+    completedAt: timestamp('completed_at').defaultNow().notNull(), // Kapan diselesaikan
+});
+
+export const userPreferences = pgTable('user_preferences', {
+    userId: uuid('user_id').primaryKey().notNull(),
+    weeklyFocusGoal: integer('weekly_focus_goal').default(10).notNull(),
 });

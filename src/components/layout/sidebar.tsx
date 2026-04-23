@@ -13,7 +13,8 @@ import {
     LogOut,
     HelpCircle,
     Inbox,
-    Archive
+    Archive,
+    BarChart2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSupabase } from '@/components/providers/supabase-provider';
@@ -28,6 +29,7 @@ const navItems = [
     { name: 'Projects', href: '/dashboard/projects', icon: FolderClosed },
     { name: 'Labels', href: '/dashboard/labels', icon: Tags },
     { name: 'Archive', href: '/dashboard/archive', icon: Archive },
+    { name: 'Reporting & Analytics', href: '/dashboard/analytics', icon: BarChart2 },
 ];
 
 export function Sidebar() {

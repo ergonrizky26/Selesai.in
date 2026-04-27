@@ -122,6 +122,12 @@ export function FocusDashboard({ initialTasks }: { initialTasks: any[] }) {
     const handleCompleteTask = async (taskId: string) => {
         setIsSaving(true);
 
+        // ✅ UPDATE: Mainkan efek suara "Ding!" yang memuaskan
+        // Anda bisa mengganti URL ini dengan file suara MP3 favorit Anda jika punya
+        const doneSound = new Audio('/sounds/done-click.mp3');
+        doneSound.volume = 0.3; // Atur volume (0.0 sampai 1.0)
+        doneSound.play().catch(e => console.log('Audio autoplay blocked by browser', e));
+
         const secondsFocused = FOCUS_TIME - timeLeft;
         const minutesFocused = Math.floor(secondsFocused / 60);
 

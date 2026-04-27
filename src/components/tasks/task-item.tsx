@@ -35,9 +35,19 @@ export function TaskItem({ task, allLabels = [], allProjects = [] }: { task: any
     const safePriority = (task.priority || 'p4').toLowerCase();
     const currentConfig = priorityConfig[safePriority] || priorityConfig.p4;
 
+    // ✅ 1. Buat fungsi helper untuk suara agar bisa dipanggil berulang
+    const playDoneSound = () => {
+        const doneSound = new Audio('/sounds/done-click.mp3');
+        doneSound.volume = 0.3; // Volume halus ala Todoist
+        doneSound.play().catch(e => console.log('Audio blocked by browser', e));
+    };
+
     // ✅ FUNGSI EKSEKUSI FINAL
     const handleComplete = async (duration: number) => {
         setIsUpdating(true);
+
+        playDoneSound();
+
         try {
             // Eksekusi ke database
             await completeTaskWithInjection(task.id, task.projectId, duration);

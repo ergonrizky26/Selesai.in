@@ -2,12 +2,13 @@
 
 import { db } from '@/db';
 // PERBAIKAN 1: Pastikan 'profiles' di-import dari schema
-import { tasks, profiles, projects } from '@/db/schema';
+import { tasks, profiles, projects, focusSessions } from '@/db/schema';
 import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { parseTaskInput } from '@/lib/nlp';
 import { eq, desc, and, lte, gt, isNull, or, asc } from 'drizzle-orm';
+
 
 async function getSessionUser() {
     // ... (kode getSessionUser tetap sama seperti sebelumnya)
@@ -277,4 +278,37 @@ export async function getCompletedTasks() {
         // Kita asumsikan updatedAt adalah waktu saat tugas di-set menjadi 'done'
         orderBy: [desc(tasks.updatedAt)],
     });
+}
+
+export async function completeTaskWithInjection(taskId: string, projectId: string | null, durationMinutes: number) {
+    const user = await getSessionUser();
+    if (!user) throw new Error('Unauthorized');
+    try {
+        // 1. Tandai Tugas Selesai
+        await db.update(tasks)
+            .set({ status: 'done', updatedAt: new Date() })
+            .where(eq(tasks.id, taskId));
+
+        // 2. Auto-Inject Sesi Fokus (Jika durasi > 0)
+        // Gunakan auth user Anda yang sesuai (misal const user = await getSessionUser())
+        // Hardcode sementara 'user.id' sesuai dengan implementasi auth Anda di file ini
+        if (durationMinutes > 0) {
+            // Asumsi Anda punya cara mengambil user ID saat ini di file action Anda
+            // Contoh: const { getUser } = await getAuth(); const user = await getUser();
+
+            await db.insert(focusSessions).values({
+                // userId: user.id, // <-- GANTI DENGAN USER ID AUTH ANDA
+                userId: user.id, // Hapus/Ganti ini dengan auth sungguhan
+                taskId: taskId,
+                projectId: projectId || null,
+                durationMinutes: durationMinutes,
+                completedAt: new Date(),
+            });
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error("Gagal memproses tugas & injeksi:", error);
+        return { error: 'Gagal memproses data' };
+    }
 }

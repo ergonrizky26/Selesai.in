@@ -16,6 +16,18 @@ const AMBIENT_SOUNDS = [
 
 const FOCUS_TIME = 25 * 60; // 25 Menit dalam detik
 
+// ✅ UPDATE 1: Fungsi Helper untuk Konfigurasi Warna Prioritas
+const getPriorityStyle = (priority?: string) => {
+    const p = (priority || 'p4').toLowerCase();
+    switch (p) {
+        case 'p1': return { color: '#ef4444', bg: 'bg-red-50', text: 'text-red-600', borderHover: 'hover:border-red-300', icon: 'text-red-200 group-hover:text-red-500', glow: 'shadow-red-100/50' };
+        case 'p2': return { color: '#f97316', bg: 'bg-orange-50', text: 'text-orange-600', borderHover: 'hover:border-orange-300', icon: 'text-orange-200 group-hover:text-orange-500', glow: 'shadow-orange-100/50' };
+        case 'p3': return { color: '#3b82f6', bg: 'bg-blue-50', text: 'text-blue-600', borderHover: 'hover:border-blue-300', icon: 'text-blue-200 group-hover:text-blue-500', glow: 'shadow-blue-100/50' };
+        // Default (P4)
+        default: return { color: '#94a3b8', bg: 'bg-slate-100', text: 'text-slate-600', borderHover: 'hover:border-slate-300', icon: 'text-slate-200 group-hover:text-slate-500', glow: 'shadow-slate-100/50' };
+    }
+};
+
 export function FocusDashboard({ initialTasks }: { initialTasks: any[] }) {
     const router = useRouter();
 
@@ -52,6 +64,9 @@ export function FocusDashboard({ initialTasks }: { initialTasks: any[] }) {
     const upcomingTasks = queue
         .filter(t => t.id !== activeTask?.id)
         .slice(0, 2);
+
+    // ✅ UPDATE 2: Dapatkan warna untuk task yang sedang aktif
+    const activeStyle = getPriorityStyle(activeTask?.priority);
 
     // --- AUDIO STATE ---
     const [activeAudio, setActiveAudio] = useState<string | null>(null);
@@ -225,15 +240,30 @@ export function FocusDashboard({ initialTasks }: { initialTasks: any[] }) {
                 <div className="space-y-4">
                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Focusing On</h4>
                     {activeTask ? (
-                        <div className="bg-white rounded-[2rem] p-6 shadow-xl shadow-purple-100/50 border-l-4 border-[#6c2bd9] relative overflow-hidden group">
-                            <div className="absolute top-6 right-6 text-purple-200 group-hover:text-purple-400 transition-colors">
+                        <div
+                            // ✅ UPDATE 3: Terapkan warna dinamis (Border & Glow Hover)
+                            className={cn(
+                                "bg-white rounded-[2rem] p-6 shadow-xl border-l-4 relative overflow-hidden group transition-all duration-300",
+                                activeStyle.glow
+                            )}
+                            style={{ borderLeftColor: activeStyle.color }}
+                        >
+                            {/* ✅ UPDATE 4: Warna dinamis Ikon Target */}
+                            <div className={cn("absolute top-6 right-6 transition-colors duration-300", activeStyle.icon)}>
                                 <Target className="w-6 h-6" />
                             </div>
                             <h3 className="text-xl font-bold text-slate-900 mb-2 pr-8 leading-tight">{activeTask.title}</h3>
                             <p className="text-sm text-slate-500 mb-6 line-clamp-3">{activeTask.description || 'Tidak ada detail spesifik untuk tugas ini.'}</p>
 
                             <div className="flex items-center gap-2 mb-6">
-                                <span className="text-[10px] font-bold bg-purple-50 text-purple-600 px-3 py-1.5 rounded-full uppercase tracking-wider">{activeTask.priority || 'P4'}</span>
+                                {/* ✅ UPDATE 5: Warna dinamis Label Prioritas (Bg & Teks) */}
+                                <span className={cn(
+                                    "text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider transition-colors",
+                                    activeStyle.bg, activeStyle.text
+                                )}>
+                                    {activeTask.priority || 'P4'}
+                                </span>
+
                                 {activeTask.labels?.map((l: string) => (
                                     <span key={l} className="text-[10px] font-bold bg-slate-50 text-slate-500 px-3 py-1.5 rounded-full uppercase tracking-wider">{l}</span>
                                 ))}
@@ -275,30 +305,36 @@ export function FocusDashboard({ initialTasks }: { initialTasks: any[] }) {
                     </div>
                     <div className={cn(
                         "space-y-3 transition-all duration-500",
-                        isQueueExpanded ? "max-h-[400px] overflow-y-auto pr-2" : ""
-                    )}>
-                        {displayedQueue.map((task: any) => (
-                            <div
-                                key={task.id}
-                                onClick={() => {
-                                    setManualTaskId(task.id);
-                                    // Opsional: Tutup kembali daftar setelah memilih jika ingin fokus kembali ke 2 list
-                                    // setIsQueueExpanded(false); 
-                                }}
-                                className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between gap-3 cursor-pointer hover:border-purple-300 hover:shadow-md transition-all group animate-in fade-in slide-in-from-top-1"
-                            >
-                                <div className="flex items-center gap-3 truncate">
-                                    <div className="w-2 h-2 rounded-full bg-slate-300 group-hover:bg-purple-400 transition-colors shrink-0" />
-                                    <span className="text-sm font-semibold text-slate-600 truncate group-hover:text-purple-700 transition-colors">
-                                        {task.title}
+                        isQueueExpanded ? "max-h-[400px] overflow-y-auto pr-2" : "")}>
+                        {displayedQueue.map((task: any) => {
+                            // ✅ UPDATE 6: Dapatkan warna spesifik untuk setiap task di antrean
+                            const qStyle = getPriorityStyle(task.priority);
+                            return (
+                                <div
+                                    key={task.id}
+                                    onClick={() => setManualTaskId(task.id)}
+                                    // ✅ UPDATE 7: Terapkan efek hover border dinamis
+                                    className={cn(
+                                        "bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between gap-3 cursor-pointer transition-all group animate-in fade-in slide-in-from-top-1 hover:shadow-md",
+                                        qStyle.borderHover
+                                    )}
+                                >
+                                    <div className="flex items-center gap-3 truncate">
+                                        <div
+                                            className="w-2.5 h-2.5 rounded-full shrink-0 transition-all opacity-60 group-hover:opacity-100 group-hover:scale-110"
+                                            style={{ backgroundColor: qStyle.color }}
+                                        />
+                                        <span className="text-sm font-semibold text-slate-600 truncate transition-colors group-hover:text-slate-900">
+                                            {task.title}
+                                        </span>
+                                    </div>
+                                    {/* Label Prioritas Kecil */}
+                                    <span className={cn("text-[9px] font-extrabold uppercase shrink-0 transition-colors opacity-50 group-hover:opacity-100", qStyle.text)}>
+                                        {task.priority || 'P4'}
                                     </span>
                                 </div>
-                                {/* Label Prioritas Kecil */}
-                                <span className="text-[9px] font-extrabold text-slate-300 group-hover:text-purple-300 uppercase shrink-0">
-                                    {task.priority || 'P4'}
-                                </span>
-                            </div>
-                        ))}
+                            );
+                        })}
 
                         {allRemainingTasks.length === 0 && (
                             <p className="text-xs text-slate-400 pl-2">Antrean kosong.</p>

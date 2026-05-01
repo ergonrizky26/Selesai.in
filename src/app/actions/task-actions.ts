@@ -312,3 +312,19 @@ export async function completeTaskWithInjection(taskId: string, projectId: strin
         return { error: 'Gagal memproses data' };
     }
 }
+
+export async function rescheduleTask(taskId: string, newDate: Date | null) {
+    try {
+        await db.update(tasks)
+            .set({
+                dueDate: newDate,
+                updatedAt: new Date()
+            })
+            .where(eq(tasks.id, taskId));
+
+        return { success: true };
+    } catch (error) {
+        console.error("Gagal reschedule tugas:", error);
+        return { error: 'Gagal reschedule tugas' };
+    }
+}
